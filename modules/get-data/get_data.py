@@ -1,5 +1,6 @@
 import json
 from riotwatcher import RiotWatcher, ApiError
+from calc import Summoner
 
 SOLO_QUEUE = 'RANKED_SOLO_5x5'
 TEAM_QUEUE = 'RANKED_TEAM_5x5'
@@ -113,5 +114,6 @@ class DataManager(object):
         
             
 data_manager = DataManager()
-data_manager.get_game_timeline()
-self.summoner1 = Summoner("Yasuo", rune1)
+rune = [0, 0, 0]
+summoner = Summoner("Kayn", rune)
+# data_manager.get_game_timeline()

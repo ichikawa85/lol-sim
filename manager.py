@@ -4,6 +4,7 @@ import threading
 import linecache
 import csv
 from calc import Summoner
+from src.monsters.gromp import Gromp
 
 class Manager(object):
     def __init__(self):
@@ -89,13 +90,24 @@ class Manager(object):
 
         # self.writer.writerow(self.result_list)
         # self.result_list = []
-        rune1 = [1, 0, 0]
-        rune2 = [0, 1, 2]
-        self.summoner1 = Summoner("Yasuo", rune1)
+        
+        rune1 = [2, 0, 0]
+        rune2 = [2, 0, 0]
+        item1 = 3071
+        item2 = 3142
+        item3 = 3147
+        self.summoner1 = Summoner("Kayn", rune1)
+        self.summoner1.reflect_rune()
+        self.summoner1.level_up(12)
         self.summoner1.debug_status()
-        self.summoner2 = Summoner("Yasuo", rune2)
+        self.summoner2 = Summoner("Kayn", rune2)
+        self.summoner2.reflect_rune()
+        self.summoner2.level_up(5)
+        # self.summoner2.purchase_item(3071)
+        # self.summoner2.purchase_item(3142)
+        # self.summoner2.sell_item(3142)
+        # self.summoner2.sell_item(3071)
         self.summoner2.debug_status()
-
         
 manager = Manager()
 manager.match()
