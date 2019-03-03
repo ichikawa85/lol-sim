@@ -9,7 +9,7 @@ PARTICIPANTS_SIZE = 10
 
 class DataManager(object):
     def __init__(self):
-        self.watcher = RiotWatcher('RGAPI-9e50b96d-b4e2-4f84-8295-e7657b002173')
+        self.watcher = RiotWatcher('RGAPI-6ac3881a-4300-47f7-a299-db19699c9074')
         self.my_region = 'jp1'
     
     def get_master_rank_summoner(self):
@@ -24,15 +24,37 @@ class DataManager(object):
         with open(path, mode='w') as f:
             f.write(str(result))
 
+    def get_challenger_rank_summoner(self):
+        result = self.watcher.league.challenger_by_queue(self.my_region, SOLO_QUEUE)
+        path = "modules/get-data/jsons/master/challenger.json"
+        with open(path, mode='w') as f:
+            f.write(str(result))
+
+
     # サモナー名から特定のチャンピオンを使った場合の試合データ取得
     def get_match(self):
         count=0
-        f = open("./modules/get-data/jsons/master/master.json", 'r')
-        data = json.load(f)
-        entries = data["entries"]
+        entries = []
+        master = open("./modules/get-data/jsons/master/master.json", 'r')
+        grandmaster = open("./modules/get-data/jsons/master/grandmaster.json", 'r')
+        challenger = open("./modules/get-data/jsons/master/challenger.json", 'r')
+        master_data = json.load(master)
+        grandmaster_data = json.load(grandmaster)
+        challenger_data = json.load(challenger)
+        master_entries = master_data["entries"]
+        grandmaster_entries = grandmaster_data["entries"]
+        challenger_entries = challenger_data["entries"]
+        entries.extend(master_entries)
+        entries.extend(grandmaster_entries)
+        entries.extend(challenger_entries)
+        print(entries)
+
+        master.close()
+        grandmaster.close()
+        challenger.close()
 
         for i in range(len(entries)):
-            summoner_name = data["entries"][i]["summonerName"]
+            summoner_name = entries[i]["summonerName"]
             print(summoner_name)
             summoner_info = self.watcher.summoner.by_name(self.my_region, summoner_name)
             try:
@@ -51,12 +73,17 @@ class DataManager(object):
         print("End Script.")
 
     def get_game_id(self):
+        target_path = "./modules/get-data/jsons/kayn_match/"
         match_game_id_list = []
-        for i in range(56):
+        files = os.listdir(target_path)
+        for i in range(len(files)):
             f = open("./modules/get-data/jsons/kayn_match/" + str(i) + ".json", 'r')
             data = json.load(f)
             for j in range(len(data["matches"])):
                 match_game_id_list.append(data["matches"][j]["gameId"])
+                
+        with open("./modules/get-data/jsons/game_id_list", mode='w') as f:
+            f.write(str(match_game_id_list))
         return match_game_id_list
 
     def get_game_detail(self):
@@ -80,6 +107,13 @@ class DataManager(object):
             with open(path_w, mode='w') as ff:
                 ff.write(str(match_detail))
             i+=1
+
+    def get_game_version(self, file_path):
+        f = open(file_path, 'r')
+        json_data = json.load(f)
+        version = json_data["gameVersion"]
+        f.close()
+        return version
 
     # 特定のチャンピオンに絞った結果を取得
     def get_game_timeline(self, match_index):
@@ -121,14 +155,40 @@ class DataManager(object):
         desc.close()
         return participant_id
 
+    def get_game_id(self, champion_id, index):
+        desc_path = './modules/get-data/jsons/kayn_match_desc/' + str(index) + '.json'
+        desc = open(desc_path, 'r')
+        json_data = json.load(desc)
+        participant_id = -1
+        for j in range(PARTICIPANTS_SIZE):
+            _champion_id = json_data["participants"][j]["championId"]
+            if _champion_id == champion_id:
+                participant_id = json_data["participants"][j]["participantId"]
+
+        desc.close()
+        return participant_id
+
     # 各イベントを適用させる
-    def apply_events(self, events, summoner, match_index): # String events, Summoner summoner
-        json_events = json.loads(json.dumps(events))
+    def apply_events(self, events, summoner, match_index, version): # String events, Summoner summoner
+        json_events_with_item = json.loads(json.dumps(events))
         level_diff = 0
-        path_w = './modules/get-data/results/csv/' + str(match_index) + '.csv'
+        tail = self.decision_darkin_or_shadow(events)
+        path_w = './modules/get-data/results/csv/' + str(match_index) + '-' + version+'' + tail + '.csv'
         f = open(path_w, 'a')
         f.write('timeline, ad, lv \n')
         destroy_count = 0
+        events_without_consumption_item = []
+        for event in json_events_with_item:
+            try:
+                # Delete control ward, potion, Refillable Potion
+                if event["itemId"] == 2055 or event["itemId"] == 2003 or event["itemId"] == 2031:
+                    pass
+                else:
+                    events_without_consumption_item.append(event)
+            except KeyError as err:
+                pass
+
+        json_events = json.loads(json.dumps(events_without_consumption_item))        
             
         for i in range(len(json_events)):
             if json_events[i]["type"] in 'ITEM_PURCHASED':
@@ -174,20 +234,71 @@ class DataManager(object):
                 destroy_count-=1
 
         f.close()
-            
+
+    def decision_darkin_or_shadow(self, events):
+        json_events = json.loads(json.dumps(events))
+        shadow_flag = False
+        darkin_flag = False
+        ret = ''
+        for i in range(len(json_events)):
+            if json_events[i]["type"] in 'ITEM_PURCHASED':
+                if json_events[i]["itemId"] == 3134 or json_events[i]["itemId"] == 3147 or json_events[i]["itemId"] == 3142:
+                    shadow_flag = True
+                elif json_events[i]["itemId"] == 3071 or json_events[i]["itemId"] == 3044 or json_events[i]["itemId"] == 3053 or json_events[i]["itemId"] == 3052:
+                    darkin_flag = True
+
+        if darkin_flag is False and shadow_flag is False:
+            for i in range(len(json_events)):
+                if json_events[i]["type"] in 'ITEM_PURCHASED':
+                    if json_events[i]["itemId"] == 3117:
+                        shadow_flag = True
+                    elif json_events[i]["itemId"] == 3047:
+                        darkin_flag = True
+
+        if darkin_flag is True and shadow_flag is True:
+            for i in range(len(json_events)):
+                if json_events[i]["type"] in 'ITEM_PURCHASED':
+                    if json_events[i]["itemId"] == 3053 or json_events[i]["itemId"] == 3065 or json_events[i]["itemId"] == 3211:
+                        shadow_flag = False
+                    elif json_events[i]["itemId"] == 3142:
+                        darkin_flag = False
+
+        if shadow_flag is True:
+            ret = ret + 'shadow'
+
+        if darkin_flag is True:
+            ret = ret + 'darkin'
+
+        return ret
+
+version = '9.2.1'
 data_manager = DataManager()
+target_path = "./modules/get-data/jsons/kayn_match_detail/"
+desc_path = "./modules/get-data/jsons/kayn_match_desc/"
+num = len(os.listdir(target_path))
+
 rune = [0, 0, 0]
-for i in range(686):
+for i in range(num):
     try:
-        summoner = Summoner("Kayn", rune)
-        summoner.reflect_rune()
-        events = data_manager.get_game_timeline(i)
-        data_manager.apply_events(events, summoner, i)
-        summoner = None
+        json_path = "./modules/get-data/jsons/kayn_match_desc/" + str(i) + ".json"
+        version_array = data_manager.get_game_version(json_path).split('.') # ['7', '19', '203', '1070']
+        version = version_array[0] + "." + version_array[1] + ".1"
+
+        print(version)
+        if '9' in version_array[0]:
+            summoner = Summoner("Kayn", rune, version)
+            summoner.reflect_rune()
+            events = data_manager.get_game_timeline(i)
+            data_manager.apply_events(events, summoner, i, version)
+            summoner = None
+        else:
+            pass
+            
     except KeyError as err:
         print("Error: KeyError")
-        os.remove('./modules/get-data/results/csv/' + str(i) + '.csv')
-    except:
-        print("Error: Unknown error ")
+        os.remove('./modules/get-data/results/csv/' + str(i) + '-' + version+ '.csv')
+    # except:
+    #     print("Error: Unknown error ")
+
 # data_manager.get_game_description()
 # data_manager.get_game_detail()

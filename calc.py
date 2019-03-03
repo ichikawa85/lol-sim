@@ -4,9 +4,9 @@ import copy
 
 class Champion(object):
     # constractor
-    def __init__(self, name):
-        f = open("./champions/9.3.1/" + name + ".json", 'r')
-        f_item = open("./item/9.3.1/item.json", 'r')
+    def __init__(self, name, version):
+        f = open("./champions/" + version + "/" + name + ".json", 'r')
+        f_item = open("./item/" + version + "/item.json", 'r')
         self.json = json.load(f)
         self.json_data = self.json["data"][name]
         self.json_item = json.load(f_item)
@@ -342,11 +342,11 @@ RUNE_BONUS_AR = 6
 RUNE_BONUS_MR = 8
          
 class Summoner(Champion):
-    def __init__(self, name, rune):
+    def __init__(self, name, rune, version):
         print("name: " + name)
         self.name = name
         self.rune = rune
-        super().__init__(self.name)
+        super().__init__(self.name, version)
         self.build = []
         self.pre_build = []
 
@@ -444,53 +444,98 @@ class Summoner(Champion):
 
         self.reflect_rune()
 
-    def reflect_build(self, item_id, sell_flag=1):
+    def reflect_build(self, item_id, sell_flag):
         item = self.json_item_data[str(item_id)]
         # print(item["stats"])
         # print(item["effect"]) # => TBD
+        # ステラックの籠手の場合は特別にpassiveを追加
+        if item_id == 3053:
+            base_ad = self.attackdamage - self.FlatPhysicalDamageMod
+            print("base_ad: " + str(base_ad))
+            self.FlatPhysicalDamageMod = self.FlatPhysicalDamageMod + base_ad / 2
+            self.attackdamage = self.attackdamage + base_ad / 2
+        
         for i in item["stats"]:
-            # decision add or diff 
-            item["stats"][i] = item["stats"][i] * sell_flag
-            
-            if 'FlatArmorMod' in i:
-                self.FlatArmorMod = self.FlatArmorMod + item["stats"][i]
-                self.armor = self.armor + item["stats"][i]
-            elif 'FlatPhysicalDamageMod' in i:
-                self.FlatPhysicalDamageMod = self.FlatPhysicalDamageMod + item["stats"][i]
-                self.attackdamage = self.attackdamage + item["stats"][i]
-            elif 'PercentAttackSpeedMod' in i:
-                self.PercentAttackSpeedMod = self.PercentAttackSpeedMod + item["stats"][i]
-                self.attackspeed = self.attackspeed + item["stats"][i] / 100
-            elif 'FlatCritChanceMod' in i:
-                self.FlatCritChanceMod = self.FlatCritChanceMod + item["stats"][i]
-                self.crit = self.crit + item["stats"][i]
-            elif 'FlatHPPoolMod' in i:
-                self.FlatHPPoolMod = self.FlatHPPoolMod + item["stats"][i]
-                self.hp = self.hp + item["stats"][i]
-            elif 'FlatHPRegenMod' in i:
-                self.FlatHPRegenMod = self.FlatHPRegenMod + item["stats"][i]
-                self.hpregen = self.hpregen + item["stats"][i]
-            elif 'FlatMPPoolMod' in i:
-                self.FlatMPPoolMod = self.FlatMPPoolMod + item["stats"][i]
-                self.mp = self.mp + item["stats"][i]
-            elif 'FlatMPRegenMod' in i:
-                self.FlatMPRegenMod = self.FlatMPRegenMod + item["stats"][i]
-                self.mpregen = self.mpregen + item["stats"][i]
-            elif 'FlatMovementSpeedMod' in i:
-                self.FlatMovementSpeedMod = self.FlatMovementSpeedMod + item["stats"][i]
-                self.movespeed = self.movespeed + item["stats"][i] 
-            elif 'PercentMovementSpeedMod' in i:
-                self.PercentMovementSpeedMod = self.PercentMovementSpeedMod + item["stats"][i]
-                self.movespeed = self.movespeed * (1 + item["stats"][i])
-            elif 'FlatSpellBlockMod' in i:
-                self.FlatSpellBlockMod = self.FlatSpellBlockMod + item["stats"][i]
-                self.spellblock = self.spellblock + item["stats"][i]
-            elif 'FlatMagicDamageMod' in i:
-                self.FlatMagicDamageMod = self.FlatMagicDamageMod + item["stats"][i]                
-                self.magicdamage = self.magicdamage + item["stats"][i]
-            elif 'PercentLifeStealMod' in i:
-                self.PercentLifeStealMod = self.PercentLifeStealMod + item["stats"][i]                
-                self.lifesteal = self.lifesteal + item["stats"][i]
+            if sell_flag is False:
+                if 'FlatArmorMod' in i:
+                    self.FlatArmorMod = self.FlatArmorMod + item["stats"][i]
+                    self.armor = self.armor + item["stats"][i]
+                elif 'FlatPhysicalDamageMod' in i:
+                    self.FlatPhysicalDamageMod = self.FlatPhysicalDamageMod + item["stats"][i]
+                    self.attackdamage = self.attackdamage + item["stats"][i]
+                elif 'PercentAttackSpeedMod' in i:
+                    self.PercentAttackSpeedMod = self.PercentAttackSpeedMod + item["stats"][i]
+                    self.attackspeed = self.attackspeed + item["stats"][i] / 100
+                elif 'FlatCritChanceMod' in i:
+                    self.FlatCritChanceMod = self.FlatCritChanceMod + item["stats"][i]
+                    self.crit = self.crit + item["stats"][i]
+                elif 'FlatHPPoolMod' in i:
+                    self.FlatHPPoolMod = self.FlatHPPoolMod + item["stats"][i]
+                    self.hp = self.hp + item["stats"][i]
+                elif 'FlatHPRegenMod' in i:
+                    self.FlatHPRegenMod = self.FlatHPRegenMod + item["stats"][i]
+                    self.hpregen = self.hpregen + item["stats"][i]
+                elif 'FlatMPPoolMod' in i:
+                    self.FlatMPPoolMod = self.FlatMPPoolMod + item["stats"][i]
+                    self.mp = self.mp + item["stats"][i]
+                elif 'FlatMPRegenMod' in i:
+                    self.FlatMPRegenMod = self.FlatMPRegenMod + item["stats"][i]
+                    self.mpregen = self.mpregen + item["stats"][i]
+                elif 'FlatMovementSpeedMod' in i:
+                    self.FlatMovementSpeedMod = self.FlatMovementSpeedMod + item["stats"][i]
+                    self.movespeed = self.movespeed + item["stats"][i] 
+                elif 'PercentMovementSpeedMod' in i:
+                    self.PercentMovementSpeedMod = self.PercentMovementSpeedMod + item["stats"][i]
+                    self.movespeed = self.movespeed * (1 + item["stats"][i])
+                elif 'FlatSpellBlockMod' in i:
+                    self.FlatSpellBlockMod = self.FlatSpellBlockMod + item["stats"][i]
+                    self.spellblock = self.spellblock + item["stats"][i]
+                elif 'FlatMagicDamageMod' in i:
+                    self.FlatMagicDamageMod = self.FlatMagicDamageMod + item["stats"][i]                
+                    self.magicdamage = self.magicdamage + item["stats"][i]
+                elif 'PercentLifeStealMod' in i:
+                    self.PercentLifeStealMod = self.PercentLifeStealMod + item["stats"][i]                
+                    self.lifesteal = self.lifesteal + item["stats"][i]
+            elif sell_flag is True:
+                if 'FlatArmorMod' in i:
+                    self.FlatArmorMod = self.FlatArmorMod - item["stats"][i]
+                    self.armor = self.armor - item["stats"][i]
+                elif 'FlatPhysicalDamageMod' in i:
+                    self.FlatPhysicalDamageMod = self.FlatPhysicalDamageMod - item["stats"][i]
+                    self.attackdamage = self.attackdamage - item["stats"][i]
+                elif 'PercentAttackSpeedMod' in i:
+                    self.PercentAttackSpeedMod = self.PercentAttackSpeedMod - item["stats"][i]
+                    self.attackspeed = self.attackspeed - item["stats"][i] / 100
+                elif 'FlatCritChanceMod' in i:
+                    self.FlatCritChanceMod = self.FlatCritChanceMod - item["stats"][i]
+                    self.crit = self.crit - item["stats"][i]
+                elif 'FlatHPPoolMod' in i:
+                    self.FlatHPPoolMod = self.FlatHPPoolMod - item["stats"][i]
+                    self.hp = self.hp - item["stats"][i]
+                elif 'FlatHPRegenMod' in i:
+                    self.FlatHPRegenMod = self.FlatHPRegenMod - item["stats"][i]
+                    self.hpregen = self.hpregen - item["stats"][i]
+                elif 'FlatMPPoolMod' in i:
+                    self.FlatMPPoolMod = self.FlatMPPoolMod - item["stats"][i]
+                    self.mp = self.mp - item["stats"][i]
+                elif 'FlatMPRegenMod' in i:
+                    self.FlatMPRegenMod = self.FlatMPRegenMod - item["stats"][i]
+                    self.mpregen = self.mpregen - item["stats"][i]
+                elif 'FlatMovementSpeedMod' in i:
+                    self.FlatMovementSpeedMod = self.FlatMovementSpeedMod - item["stats"][i]
+                    self.movespeed = self.movespeed - item["stats"][i] 
+                elif 'PercentMovementSpeedMod' in i:
+                    self.PercentMovementSpeedMod = self.PercentMovementSpeedMod - item["stats"][i]
+                    self.movespeed = self.movespeed * (1 - item["stats"][i])
+                elif 'FlatSpellBlockMod' in i:
+                    self.FlatSpellBlockMod = self.FlatSpellBlockMod - item["stats"][i]
+                    self.spellblock = self.spellblock - item["stats"][i]
+                elif 'FlatMagicDamageMod' in i:
+                    self.FlatMagicDamageMod = self.FlatMagicDamageMod - item["stats"][i]                
+                    self.magicdamage = self.magicdamage - item["stats"][i]
+                elif 'PercentLifeStealMod' in i:
+                    self.PercentLifeStealMod = self.PercentLifeStealMod - item["stats"][i]                
+                    self.lifesteal = self.lifesteal - item["stats"][i]
 
 
     def purchase_item(self, item_id):
@@ -498,7 +543,7 @@ class Summoner(Champion):
             self.pre_build = copy.copy(self.build)
             self.build.append(item_id)
             self.backup_status()
-            self.reflect_build(item_id)
+            self.reflect_build(item_id, False)
         else:
             pass
         
@@ -510,7 +555,7 @@ class Summoner(Champion):
             else:
                 pass
             self.backup_status()
-            self.reflect_build(item_id, -1)
+            self.reflect_build(item_id, True)
         else:
             pass
 
