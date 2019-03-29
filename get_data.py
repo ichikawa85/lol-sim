@@ -1,5 +1,6 @@
 import json
 import os
+import datetime
 from riotwatcher import RiotWatcher, ApiError
 from calc import Summoner
 
@@ -9,26 +10,41 @@ PARTICIPANTS_SIZE = 10
 
 class DataManager(object):
     def __init__(self):
-        self.watcher = RiotWatcher('RGAPI-87627c7d-4c88-405b-b23c-8d8d8789913b')
+        self.watcher = RiotWatcher('RGAPI-ac212943-60d4-4bc3-aa3b-d94d76868da5')
         self.my_region = 'jp1'
+        self.today = datetime.datetime.today().strftime("%Y%m%d")
     
-    def get_master_rank_summoner(self):
-        result = self.watcher.league.masters_by_queue(self.my_region, SOLO_QUEUE)
-        path = "modules/get-data/jsons/master/master.json"
-        with open(path, mode='w') as f:
-            f.write(str(result))
+    def get_over_master_rank_summoner(self):
+        master = self.watcher.league.masters_by_queue(self.my_region, SOLO_QUEUE)
+        grandmaster = self.watcher.league.grandmaster_by_queue(self.my_region, SOLO_QUEUE)
+        challenger = self.watcher.league.challenger_by_queue(self.my_region, SOLO_QUEUE)
 
-    def get_grandmaster_rank_summoner(self):
-        result = self.watcher.league.grandmaster_by_queue(self.my_region, SOLO_QUEUE)
-        path = "modules/get-data/jsons/master/grandmaster.json"
-        with open(path, mode='w') as f:
-            f.write(str(result))
+        target_path = "modules/get-data/jsons/master/"+ self.today
+        if os.path.exists(target_path) is False:
+            os.mkdir(target_path)
+        path1 = target_path +"/master.json"
+        with open(path1, mode='w') as f:
+            f.write(str(master))
+        path2 = target_path +"/grandmaster.json"
+        with open(path2, mode='w') as f:
+            f.write(str(grandmaster))
+        path3 = target_path +"/challenger.json"
+        with open(path3, mode='w') as f:
+            f.write(str(challenger))
 
-    def get_challenger_rank_summoner(self):
-        result = self.watcher.league.challenger_by_queue(self.my_region, SOLO_QUEUE)
-        path = "modules/get-data/jsons/master/challenger.json"
-        with open(path, mode='w') as f:
-            f.write(str(result))
+    # def get_grandmaster_rank_summoner(self):
+    #     result = self.watcher.league.grandmaster_by_queue(self.my_region, SOLO_QUEUE)
+    #     os.mkdir("modules/get-data/jsons/master/"+ self.today)
+    #     path = "modules/get-data/jsons/master/"+ self.today +"/grandmaster.json"
+    #     with open(path, mode='w') as f:
+    #         f.write(str(result))
+
+    # def get_challenger_rank_summoner(self):
+    #     result = self.watcher.league.challenger_by_queue(self.my_region, SOLO_QUEUE)
+    #     os.mkdir("modules/get-data/jsons/master/"+ self.today)
+    #     path = "modules/get-data/jsons/master/"+ self.today +"/challenger.json"
+    #     with open(path, mode='w') as f:
+    #         f.write(str(result))
 
     # サモナー名から特定のチャンピオンを使った場合の試合データ取得
     def get_match(self):
@@ -290,50 +306,12 @@ class DataManager(object):
 
         return ret
 
-    def decision_darkin_or_shadow(self, events):
-        json_events = json.loads(json.dumps(events))
-        shadow_flag = False
-        darkin_flag = False
-        ret = ''
-        for i in range(len(json_events)):
-            if json_events[i]["type"] in 'ITEM_PURCHASED':
-                if json_events[i]["itemId"] == 3134 or json_events[i]["itemId"] == 3147 or json_events[i]["itemId"] == 3142:
-                    shadow_flag = True
-                elif json_events[i]["itemId"] == 3071 or json_events[i]["itemId"] == 3044 or json_events[i]["itemId"] == 3053 or json_events[i]["itemId"] == 3052:
-                    darkin_flag = True
-
-        if darkin_flag is False and shadow_flag is False:
-            for i in range(len(json_events)):
-                if json_events[i]["type"] in 'ITEM_PURCHASED':
-                    if json_events[i]["itemId"] == 3117:
-                        shadow_flag = True
-                    elif json_events[i]["itemId"] == 3047:
-                        darkin_flag = True
-
-        if darkin_flag is True and shadow_flag is True:
-            for i in range(len(json_events)):
-                if json_events[i]["type"] in 'ITEM_PURCHASED':
-                    if json_events[i]["itemId"] == 3053 or json_events[i]["itemId"] == 3065 or json_events[i]["itemId"] == 3211:
-                        shadow_flag = False
-                    elif json_events[i]["itemId"] == 3142:
-                        darkin_flag = False
-
-        if shadow_flag is True:
-            ret = ret + 'shadow'
-
-        if darkin_flag is True:
-            ret = ret + 'darkin'
-
-        return ret
-
     def update_match_data(self):
-        # self.get_master_rank_summoner()
-        # self.get_grandmaster_rank_summoner()
-        # self.get_challenger_rank_summoner()
+        self.get_over_master_rank_summoner()
         ### !!! We need to organize json format at here.
         # self.get_match()
         # self.get_game_description()
-        self.get_game_detail()
+        # self.get_game_detail()
         
     def output_csv(self):
         version = ''
@@ -366,8 +344,8 @@ class DataManager(object):
 
 
 data_manager = DataManager()
-data_manager.output_csv()
-# data_manager.update_match_data()
+# data_manager.output_csv()
+data_manager.update_match_data()
 
 # target_path = "./modules/get-data/jsons/kayn_match_detail/"
 # num = len(os.listdir(target_path))
