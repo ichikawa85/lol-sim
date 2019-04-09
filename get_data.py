@@ -7,12 +7,28 @@ from calc import Summoner
 SOLO_QUEUE = 'RANKED_SOLO_5x5'
 TEAM_QUEUE = 'RANKED_TEAM_5x5'
 PARTICIPANTS_SIZE = 10
+TARGET_CHAMPION = 4
+SUMMONERS_RIFT = 420
+SEASON_NUMBER = 13 # means season9
 
 class DataManager(object):
     def __init__(self):
-        self.watcher = RiotWatcher('RGAPI-ac212943-60d4-4bc3-aa3b-d94d76868da5')
+        self.watcher = RiotWatcher('RGAPI-6465675b-768f-4922-8810-45b3ae727468')
         self.my_region = 'jp1'
-        self.today = datetime.datetime.today().strftime("%Y%m%d")
+        # self.today = datetime.datetime.today().strftime("%Y%m%d")
+        self.today = "20190329"
+        self.match_path = './modules/get-data/jsons/fate_match/'
+        self.timeline_path = './modules/get-data/jsons/fate_match_timeline/'
+        self.description_path = './modules/get-data/jsons/fate_match_desc/'
+        if os.path.exists(self.match_path) is False:
+            os.mkdir(self.match_path)
+        if os.path.exists(self.timeline_path) is False:
+            os.mkdir(self.timeline_path)
+        if os.path.exists(self.description_path) is False:
+            os.mkdir(self.description_path)
+
+        self.marksman_list = self.get_role_key_list("Marksman", "9.6.1")
+
     
     def get_over_master_rank_summoner(self):
         master = self.watcher.league.masters_by_queue(self.my_region, SOLO_QUEUE)
@@ -32,27 +48,13 @@ class DataManager(object):
         with open(path3, mode='w') as f:
             f.write(str(challenger))
 
-    # def get_grandmaster_rank_summoner(self):
-    #     result = self.watcher.league.grandmaster_by_queue(self.my_region, SOLO_QUEUE)
-    #     os.mkdir("modules/get-data/jsons/master/"+ self.today)
-    #     path = "modules/get-data/jsons/master/"+ self.today +"/grandmaster.json"
-    #     with open(path, mode='w') as f:
-    #         f.write(str(result))
-
-    # def get_challenger_rank_summoner(self):
-    #     result = self.watcher.league.challenger_by_queue(self.my_region, SOLO_QUEUE)
-    #     os.mkdir("modules/get-data/jsons/master/"+ self.today)
-    #     path = "modules/get-data/jsons/master/"+ self.today +"/challenger.json"
-    #     with open(path, mode='w') as f:
-    #         f.write(str(result))
-
     # サモナー名から特定のチャンピオンを使った場合の試合データ取得
     def get_match(self):
         count=0
         entries = []
-        master = open("./modules/get-data/jsons/master/master.json", 'r')
-        grandmaster = open("./modules/get-data/jsons/master/grandmaster.json", 'r')
-        challenger = open("./modules/get-data/jsons/master/challenger.json", 'r')
+        master = open("./modules/get-data/jsons/master/"+self.today+"/master.json", 'r')
+        grandmaster = open("./modules/get-data/jsons/master/"+self.today+"/grandmaster.json", 'r')
+        challenger = open("./modules/get-data/jsons/master/"+self.today+"/challenger.json", 'r')
         master_data = json.load(master)
         grandmaster_data = json.load(grandmaster)
         challenger_data = json.load(challenger)
@@ -73,8 +75,8 @@ class DataManager(object):
             print(summoner_name)
             summoner_info = self.watcher.summoner.by_name(self.my_region, summoner_name)
             try:
-                _match = self.watcher.match.matchlist_by_account(self.my_region, summoner_info["accountId"], queue=420, champion=141)
-                path = "modules/get-data/jsons/kayn_match/" + str(count) + ".json"
+                _match = self.watcher.match.matchlist_by_account(self.my_region, summoner_info["accountId"], queue=SUMMONERS_RIFT, champion=TARGET_CHAMPION, season=SEASON_NUMBER)
+                path = self.match_path + str(count) + ".json"
                 with open(path, mode='w') as f:
                     f.write(str(_match))
                 count+=1
@@ -88,11 +90,11 @@ class DataManager(object):
         print("End Script.")
 
     def get_game_id(self):
-        target_path = "./modules/get-data/jsons/kayn_match/"
+        target_path = self.match_path
         match_game_id_list = []
         files = os.listdir(target_path)
         for i in range(len(files)):
-            f = open("./modules/get-data/jsons/kayn_match/" + str(i) + ".json", 'r')
+            f = open(target_path + str(i) + ".json", 'r')
             data = json.load(f)
             for j in range(len(data["matches"])):
                 match_game_id_list.append(data["matches"][j]["gameId"])
@@ -101,33 +103,32 @@ class DataManager(object):
             f.write(str(match_game_id_list))
         return match_game_id_list
 
-    def get_game_detail(self):
+    def get_game_timeline(self):
         game_id_list = self.get_game_id()
-        i=0
         for game_id in game_id_list:
             print(game_id)
             try:
-                match_detail = self.watcher.match.timeline_by_match(self.my_region, game_id)
-                path_w = './modules/get-data/jsons/kayn_match_detail/' + str(i) + '.json'
+                match_timeline = self.watcher.match.timeline_by_match(self.my_region, game_id)
+                path_w = self.timeline_path + game_id + '.json'
                 with open(path_w, mode='w') as ff:
-                    ff.write(str(match_detail))
-                    i+=1
+                    ff.write(str(match_timeline))
             except:
                 print("Error: Unknown error ")
 
 
     def get_game_description(self):
         game_id_list = self.get_game_id()
-        i=0
         for game_id in game_id_list:
-            # print(match_id.strip())
-            path_w = './modules/get-data/jsons/kayn_match_desc/' + str(i) + '.json'
-            match_detail = self.watcher.match.by_id(self.my_region, game_id)
-            with open(path_w, mode='w') as ff:
-                ff.write(str(match_detail))
-            i+=1
+            try:
+                path_w = self.description_path + game_id + '.json'
+                match_description = self.watcher.match.by_id(self.my_region, game_id)
+                with open(path_w, mode='w') as ff:
+                    ff.write(str(match_description))
+            except:
+                print("Error: Unknown error ")
 
     def get_game_version(self, file_path):
+        print(file_path)
         f = open(file_path, 'r')
         json_data = json.load(f)
         version = json_data["gameVersion"]
@@ -135,12 +136,12 @@ class DataManager(object):
         return version
 
     # 特定のチャンピオンに絞った結果を取得
-    def get_game_timeline(self, match_index):
+    def get_events_limited_the_champion(self, game_id):
         # match_index=1
         level = 0
-        participant_id = self.get_participant_id(141, match_index)
-        detail_path = './modules/get-data/jsons/kayn_match_detail/' + str(match_index) + '.json'
-        f = open(detail_path, 'r')
+        participant_id = self.get_participant_id(TARGET_CHAMPION, game_id)
+        target_path = self.timeline_path + game_id + '.json'
+        f = open(target_path, 'r')
         json_data = json.load(f)
         ret_events = []
 
@@ -161,16 +162,16 @@ class DataManager(object):
         return ret_events
 
     # 特定のチャンピオンのxp経緯を取得
-    def get_xp_timeline(self, match_index, version):
-        participant_id = self.get_participant_id(141, match_index)
-        detail_path = './modules/get-data/jsons/kayn_match_detail/' + str(match_index) + '.json'
-        f = open(detail_path, 'r')
+    def get_xp_timeline(self, game_id, version):
+        participant_id = self.get_participant_id(TARGET_CHAMPION, game_id)
+        target_path = self.timeline_path + game_id + '.json'
+        f = open(target_path, 'r')
         json_data = json.load(f)
         ret_events = []
 
-        path_w = './modules/get-data/results/xp_csv/' + str(match_index) + '-' + version + '.csv'
+        path_w = './modules/get-data/results/xp_csv/' + game_id + '-' + version + '.csv'
         f = open(path_w, 'a')
-        f.write('timeline, xp \n')
+        f.write('timeline, xp, game_id \n')
         first_flag = True
 
         for frame in range(len(json_data["frames"])):
@@ -178,14 +179,84 @@ class DataManager(object):
             timestamp = json_data["frames"][frame]["timestamp"]
             min_timestamp = round((timestamp) / 1000 / 60, 1)
             xp = json_data["frames"][frame]["participantFrames"][str(participant_id)]["xp"]
-            output_str = str(min_timestamp) + ', ' +str(xp) + "\n"
+            output_str = str(min_timestamp) + ', ' +str(xp) + ', ' + game_id + "\n"
             f.write(output_str)
             
         f.close()
 
+    # 特定のチャンピオンの対面との経験値の差分の累積を取得
+    def get_xp_diff(self, game_id, version):
+        participant_id = self.get_participant_id(TARGET_CHAMPION, game_id)
+        opposive_participant_id = self.get_opposive_participant_id(TARGET_CHAMPION, game_id, self.marksman_list)
+        if opposive_participant_id == -1:
+            return -1
+        target_path = self.timeline_path + game_id + '.json'
+        f = open(target_path, 'r')
+        json_data = json.load(f)
+        commulation = 0
+
+        path_w = './modules/get-data/results/xp_diff_csv/' + game_id + '-' + version + '.csv'
+        f = open(path_w, 'a')
+        f.write('timeline, xp_diff, game_id \n')
+        first_flag = True
+
+        for frame in range(len(json_data["frames"])):     
+            timestamp = json_data["frames"][frame]["timestamp"]
+            min_timestamp = round((timestamp) / 1000 / 60, 1)
+            xp = json_data["frames"][frame]["participantFrames"][str(participant_id)]["xp"]
+            o_xp = json_data["frames"][frame]["participantFrames"][str(opposive_participant_id)]["xp"]
+            diff = xp - o_xp
+            commulation = commulation + diff
+            
+        f.close()
+        return commulation
+
+    def get_gold_timeline(self, game_id, version):
+        participant_id = self.get_participant_id(TARGET_CHAMPION, game_id)
+        target_path = self.timeline_path + game_id + '.json'
+        f = open(target_path, 'r')
+        json_data = json.load(f)
+        ret_events = []
+
+        path_w = './modules/get-data/results/gold_csv/' + game_id + '-' + version + '.csv'
+        f = open(path_w, 'a')
+        f.write('timeline, gold, game_id \n')
+        first_flag = True
+
+        for frame in range(len(json_data["frames"])):
+            
+            timestamp = json_data["frames"][frame]["timestamp"]
+            min_timestamp = round((timestamp) / 1000 / 60, 1)
+            gold = json_data["frames"][frame]["participantFrames"][str(participant_id)]["totalGold"]
+            output_str = str(min_timestamp) + ', ' +str(gold) + ', ' + game_id + "\n"
+            f.write(output_str)
+            
+        f.close()
+
+    def get_gold_diff(self, game_id, version):
+        participant_id = self.get_participant_id(TARGET_CHAMPION, game_id)
+        opposive_participant_id = self.get_opposive_participant_id(TARGET_CHAMPION, game_id, self.marksman_list)
+        if opposive_participant_id == -1:
+            return -1
+        target_path = self.timeline_path + game_id + '.json'
+        f = open(target_path, 'r')
+        json_data = json.load(f)
+        commulation = 0
+
+        for frame in range(len(json_data["frames"])):
+            timestamp = json_data["frames"][frame]["timestamp"]
+            min_timestamp = round((timestamp) / 1000 / 60, 1)
+            gold = json_data["frames"][frame]["participantFrames"][str(participant_id)]["totalGold"]
+            o_gold = json_data["frames"][frame]["participantFrames"][str(opposive_participant_id)]["totalGold"]
+            diff = gold - o_gold
+            commulation = commulation + diff
+
+        f.close()
+        return commulation
+        
     # 指定したチャンピオンの参加者IDの取得
-    def get_participant_id(self, champion_id, index):
-        desc_path = './modules/get-data/jsons/kayn_match_desc/' + str(index) + '.json'
+    def get_participant_id(self, champion_id, game_id):
+        desc_path = self.description_path + game_id + '.json'
         desc = open(desc_path, 'r')
         json_data = json.load(desc)
         participant_id = -1
@@ -197,14 +268,59 @@ class DataManager(object):
         desc.close()
         return participant_id
 
+    # 対面の参加者IDの取得
+    def get_opposive_participant_id(self, champion_id, game_id, marksman_list):
+        desc_path = self.description_path + game_id + '.json'
+        desc = open(desc_path, 'r')
+        json_data = json.load(desc)
+        participant_id = self.get_participant_id(champion_id, game_id)
+        ret = -1
+
+        lane = ""
+        opposive_team_id = 0
+        for j in range(PARTICIPANTS_SIZE):
+            _participant_id = json_data["participants"][j]["participantId"]
+            if participant_id == _participant_id:
+                lane = json_data["participants"][j]["timeline"]["lane"]
+                team_id = json_data["participants"][j]["teamId"]
+                if team_id == 100:
+                    opposive_team_id = 200
+                elif team_id == 200:
+                    opposive_team_id = 100
+                else:
+                    print("Error: Team ID value")
+                    
+        for j in range(PARTICIPANTS_SIZE):
+            if json_data["participants"][j]["teamId"] == opposive_team_id and lane in json_data["participants"][j]["timeline"]["lane"] and lane not in "NONE" and str(json_data["participants"][j]["championId"]) not in marksman_list and json_data["participants"][j]["timeline"]["role"] not in "DUO_SUPPORT":
+
+                ret = json_data["participants"][j]["participantId"]
+                        
+        desc.close()
+        return ret
+
+    # 指定したロールのチャンピオンリストを返す
+    def get_role_key_list(self, role, version):
+        champions_path = 'champions/' + version + '/'
+        files = os.listdir(champions_path)
+        key_list = []
+        for file in files:
+            name = file.split(".")[0]
+            f = open("./champions/" + version + "/" + file, 'r')
+            champion_data = json.load(f)
+            tag = champion_data["data"][name]["tags"]
+            if role in tag:
+                key_list.append(champion_data["data"][name]["key"])
+            f.close()
+
+        return key_list
+
     # 各イベントを適用させる
-    def apply_events(self, events, summoner, match_index, version): # String events, Summoner summoner
+    def apply_events(self, events, summoner, game_id, version): # String events, Summoner summoner
         json_events_with_item = json.loads(json.dumps(events))
         level_diff = 0
-        # tail = self.decision_darkin_or_shadow(events)
-        path_w = './modules/get-data/results/flat_csv/' + str(match_index) + '-' + version + '.csv'
+        path_w = './modules/get-data/results/flat_csv/' + game_id + '-' + version + '.csv'
         f = open(path_w, 'a')
-        f.write('timeline, ad, lv \n')
+        f.write('timeline, ap, lv, game_id \n')
         destroy_count = 0
         events_without_consumption_item = []
         for event in json_events_with_item:
@@ -263,7 +379,7 @@ class DataManager(object):
                             break
 
             if destroy_count == 0:
-                output_str = str(min_timestamp) + ", " + str(round(summoner.FlatPhysicalDamageMod)) + ", " + str(summoner.level) + "\n"
+                output_str = str(min_timestamp) + ", " + str(round(summoner.magicdamage)) + ", " + str(summoner.level) + ", " + game_id + "\n"
                 f.write(output_str)
             else:
                 destroy_count-=1
@@ -307,48 +423,64 @@ class DataManager(object):
         return ret
 
     def update_match_data(self):
-        self.get_over_master_rank_summoner()
+        # self.get_over_master_rank_summoner()
         ### !!! We need to organize json format at here.
         # self.get_match()
-        # self.get_game_description()
-        # self.get_game_detail()
+        self.get_game_description()
+        self.get_game_timeline()
         
     def output_csv(self):
         version = ''
-        target_path = "./modules/get-data/jsons/kayn_match_detail/"
-        desc_path = "./modules/get-data/jsons/kayn_match_desc/"
+        target_path = self.timeline_path
+        files = os.listdir(target_path)
         num = len(os.listdir(target_path))
+        desc_path = self.description_path
+
+        path_w = './modules/get-data/results/diff-commulation.csv'
+        f = open(path_w, 'a')
+        f.write('xp_diff, gold_diff, game_id \n')
 
         rune = [0, 0, 0]
-        for i in range(num):
+        for file in files:
             try:
-                json_path = "./modules/get-data/jsons/kayn_match_desc/" + str(i) + ".json"
+                game_id = file.split(".")[0]
+                json_path = self.description_path + game_id + ".json"
                 version_array = self.get_game_version(json_path).split('.') # ['7', '19', '203', '1070']
                 version = version_array[0] + "." + version_array[1] + ".1"
 
                 if '9' in version_array[0]: # only season9
-                    summoner = Summoner("Kayn", rune, version)
-                    summoner.reflect_rune()
-                    events = self.get_game_timeline(i)
-                    self.apply_events(events, summoner, i, version)
-                    summoner = None
-                    # self.get_xp_timeline(i, version)
+                    # summoner = Summoner("TwistedFate", rune, version)
+                    # summoner.reflect_rune()
+                    # events = self.get_events_limited_the_champion(game_id)
+                    # self.apply_events(events, summoner, game_id, version)
+                    # summoner = None
+                    # self.get_xp_timeline(game_id, version)
+                    # self.get_gold_timeline(game_id, version)
+                    xp_diff = self.get_xp_diff(game_id, version)
+                    gold_diff = self.get_gold_diff(game_id, version)
+                    if xp_diff == -1 or gold_diff == -1:
+                        pass
+                    else:
+                        output_str = str(xp_diff) + ', ' +str(gold_diff) + ', ' + game_id + "\n"
+                        f.write(output_str)
+
                 else:
                     pass
             
             except KeyError as err:
                 print("Error: KeyError")
-                os.remove('./modules/get-data/results/csv/' + str(i) + '-' + version+ '.csv')
-            # except:
-            #     print("Error: Unknown error ")
+                
+        f.close()
 
+data_manager = DataManager()    
+data_manager.output_csv()
+# data_manager.update_match_data()
 
-data_manager = DataManager()
-# data_manager.output_csv()
-data_manager.update_match_data()
-
-# target_path = "./modules/get-data/jsons/kayn_match_detail/"
-# num = len(os.listdir(target_path))
 # rune = [0, 0, 0]
-# for i in range(num):
-#     data_manager.get_xp_timeline(i)
+# version = "9.6.1"
+# game_id = "1"
+# summoner = Summoner("TwistedFate", rune, version)
+# summoner.reflect_rune()
+# events = data_manager.get_events_limited_the_champion("190183934")
+# print(events)
+# data_manager.self.apply_events(events, summoner, game_id, version)

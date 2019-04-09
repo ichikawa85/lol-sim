@@ -43,10 +43,10 @@ ax.text(0.1,0.9, 'y='+ str(round(a,2)) +'x'+str(round(b,2)), fontsize=18, transf
 print('y='+ str(round(a,2)) +'x+'+str(round(b,2)))
 ax.set_xlabel('minute')
 ax.set_ylabel('AD')
-ax.set_xlim([0,60])
-ax.set_ylim([0,350])
+# ax.set_xlim([0,60])
+# ax.set_ylim([0,350])
 
 plt.title("Attack Damage(patch 9.1 - 9.5)")
 # plt.legend(loc='lower right')
 plt.tight_layout()
-plt.savefig('all_flat_ad_single.png')
+plt.savefig('all_flat_ap2.png')

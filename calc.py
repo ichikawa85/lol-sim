@@ -107,7 +107,7 @@ class Champion(object):
         self.pre_spellblockperlevel = self.json_data["stats"]["spellblockperlevel"]
         self.pre_magicdamage = 0
         self.pre_lifesteal = 0
-        self.pre_pre_cdr = 0
+        self.pre_cdr = 0
         self.pre_FlatHPPoolMod = 0
         self.pre_FlatMPPoolMod = 0
         self.pre_PercentHPPoolMod = 0
@@ -377,7 +377,7 @@ class Summoner(Champion):
         
         # line 1
         if self.rune[0] == 0:
-            if self.FlatPhysicalDamageMod >= self.FlatMagicDamageMod:
+            if self.FlatPhysicalDamageMod > self.FlatMagicDamageMod:
                 self.attackdamage = self.attackdamage + RUNE_BONUS_AD
                 self.rune_bonus_first["AD"] = RUNE_BONUS_AD
             else:
@@ -395,7 +395,7 @@ class Summoner(Champion):
 
         # line 2
         if self.rune[1] == 0:
-            if self.FlatPhysicalDamageMod >= self.FlatMagicDamageMod:
+            if self.FlatPhysicalDamageMod > self.FlatMagicDamageMod:
                 self.attackdamage = self.attackdamage + RUNE_BONUS_AD
                 self.rune_bonus_second["AD"] = RUNE_BONUS_AD
             else:
@@ -493,6 +493,7 @@ class Summoner(Champion):
                 elif 'FlatMagicDamageMod' in i:
                     self.FlatMagicDamageMod = self.FlatMagicDamageMod + item["stats"][i]                
                     self.magicdamage = self.magicdamage + item["stats"][i]
+
                 elif 'PercentLifeStealMod' in i:
                     self.PercentLifeStealMod = self.PercentLifeStealMod + item["stats"][i]                
                     self.lifesteal = self.lifesteal + item["stats"][i]

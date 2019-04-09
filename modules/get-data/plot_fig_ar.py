@@ -5,6 +5,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import os
 import csv
+import math
 # %matplotlib inline
 
 def xp2level(xp):
@@ -44,7 +45,7 @@ def xp2level(xp):
 def q_damage(lv):
     skill_level=0
     get_q_level=[1,4,5,7,9]
-    q_damage_list = [120,160,200,240,280]
+    q_damage_list = [60,105,150,195,240]
     for level in get_q_level:
         if lv >= level:
             skill_level+=1
@@ -67,13 +68,21 @@ def w_damage(lv):
 def base_ad(lv):
     return 68+3.3*(lv-1)*(0.685+0.0175*lv)
 
+def minion_hp(time):
+    update = 0
+    hp = [296, 302, 308, 314, 320, 328.25, 336, 344.75, 353, 361.25, 369.5, 377.75, 386, 394.25, 402.5, 410.75, 419, 427.25, 435.5, 443.75, 452, 460.25, 468.5, 476.75, 485]
+    # f time%1.5 == 0:
+    count = math.floor(time/1.5)
+    
+    return hp[count]
+
 temp_x = []
 temp_y = []
 
 all_ar = []
-times = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
-for j in range(160):
-    all_ar.append(j)
+# times = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+# for j in range(160):
+#     all_ar.append(j)
 
 temp_lv = 0
 for i in range(60):
@@ -90,16 +99,6 @@ for i in range(60):
     b = base_ad(lv)
     ar = (40*ad+630*lv+210)/(0.27*ad+0.1*q+0.1*w+0.1*b+0.252*lv+1.908)
     # print(40*ad+630*lv+210)
-    print(i)
-    # print(ad)
-    # print(q)
-    # print(w)
-    # print(b)
-    # print(lv)
-    # print(40*ad+630*lv+210)
-    # print(0.27*ad+0.1*q+0.1*w+0.1*b+0.252*lv+1.908)
-    print(ar)
-    print("----")
     temp_x.append(t)
     temp_y.append(ar)
 
